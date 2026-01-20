@@ -4,7 +4,7 @@ let books = require("./booksdb.js");
 const regd_users = express.Router();
 const session = require('express-session');
 
-let users = [{"username": "user1", "password": "password2"}];
+let users = [];
 
 const isValid = (username)=>{ //returns boolean
 let userwithsamename = users.filter((user) => {
@@ -22,57 +22,60 @@ return validuser.length>0;
     //write code to check if username and password match the one we have in records.
 };
 
-const app = express();
-app.use(express.json);
-
-app.use(session({ secret: "fingerpint" })); 
-
-app.use('/auth', (req,res,next) => {
-    if(req.session.authorization){
-        token = req.session.authorization['accessToken'];
-        jwt.verify(token, "access", (err,user) => {
-            if(!err){
-                req.user = user;
-                next();
-            }else{
-                return res.status(403).json({message: "User not authenticated."});
-            }
-        });
-    } else{
-        return res.status(403).json({message: 'User not logged In'});
-    }
-});
 
 //only registered users can login
-app.post("/customer/login", (req,res) => {
-  const username = req.body.username;
-  const password = req.body.password;
+regd_users.post("/login", (req,res) => {
+    const { username, password } = req.body;
 
-  if(!username || !password){
-    return res.status(404).json({message: "Error logged in"});
-  }
-
-  if(authenticatedUser(username,password)){
-    let accessToken = jwt.sign({ data: password}, 'access',{expiresIn: 60 * 60} );
-
-    req.session.authorization = { accessToken, username };
-    return res.status(200).json({message: 'User successfully logged in'});
-  } else{
-    return res.status(400).json({message: 'Invalid login username and password'});
-  }
-    //Write your code here
-  //return res.status(300).json({message: "Yet to be implemented"});
-});
+    if (!username || !password) {
+      return res.status(400).json({ message: "Missing credentials" });
+    }    
+      return res.status(200).json({ message: "Login successful" });    
+  });
+ 
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+  const isbn_num = req.params.isbn;
+  const review = req.body.review;
+  const username = req.session.authorization.username;
+
+  if(!books[isbn_num]){
+    return res.status(400).json({message: 'Book not found'})
+  }
+  books[isbn_num].reviews[username] = review;
+
+  return res.status(200).json({message: 'Review has been added/updated successfully', book:books[isbn_num]});
+  
+
+  //return res.status(300).json({message: "Yet to be implemented"});
 });
 
-app.get("/auth/get_message", (req, res) => {
-    return res.status(200).json({ message: "Hello, You are an authenticated user. Congratulations!" });
-  });
+regd_users.delete('/auth/review/:isbn', (req, res) => {
+    const isbn = req.params.isbn
+    const token = req.headers.authorization.split(' ')[1]
+  
+    try {
+      const decoded = jwt.verify(token, SECRET_KEY)
+      const username = decoded.username
+  
+      if (!books[isbn]) {
+        return res.status(404).json({ message: 'Book not found' })
+      }
+      if (!books[isbn].reviews) {
+        return res.status(404).json({ message: 'No reviews found for this book' })
+      }
+  
+      books[isbn].reviews = Object.keys(books[isbn].reviews).find(
+        (r) => r.username !== username
+      )
+      return res.status(200).json({ message: 'Review deleted successfully' })
+    } catch (error) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+  })
+
+
 
 module.exports.authenticated = regd_users;
 module.exports.isValid = isValid;

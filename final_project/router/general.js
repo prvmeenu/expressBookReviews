@@ -21,39 +21,95 @@ public_users.post("/register", (req,res) => {
 
 // Get the book list available in the shop
 public_users.get('/',function (req, res) {
-    res.send(JSON.stringify(books,null,4));
+    new Promise((resolve,reject) => {
+        resolve(JSON.stringify(books,null,4));
+    })
+    .then((data) => {
+        return res.status(200).json({ data })
+      })
+      .catch((error) => {
+        return res.status(400).json({ message: error })
+      })
+    
   //return res.status(300).json({message: "Yet to be implemented"});
 });
 
+public_users.get('/', async function (req, res) {
+    try {
+      const data = await new Promise((resolve, reject) => {
+        resolve(JSON.stringify(books))
+      })
+      return res.status(200).json({ data })
+    } catch (error) {
+      return res.status(400).json({ message: error })
+    }
+  })
+
 // Get book details based on ISBN
 public_users.get('/isbn/:isbn',function (req, res) {
-  const isbn_num = req.params.isbn;
-  res.send(books[isbn_num]);
+    new Promise((resolve,reject) => {
+        const isbn_num = req.params.isbn;
+        const book = books[isbn_num]
+    if (!book) {
+      reject('Book not found')
+    } else {
+      resolve(book)
+    }
+  })
+    .then((data) => {
+      res.status(200).json(data)
+    })
+    .catch((error) => {
+      res.status(404).json({ message: error })
+    })
+
+    });
+  
  // return res.status(300).json({message: "Yet to be implemented"});
- });
+
   
 // Get book details based on author
 public_users.get('/author/:author',function (req, res) {
-  const author_name = req.params.author;
-  const res_book = Object.values(books).find((b) => b.author === author_name);
-  if(res_book){
-    res.send(JSON.stringify(res_book,null,4));
-  }else{
-    res.send(`Book with authout name ${author_name} not found`);
-  }
+    new Promise((resolve, reject) => {
+        const author = req.params.author
+        const booksByAuthor = Object.values(books).filter(
+          (b) => b.author === author
+        )
+        if (booksByAuthor.length === 0) {
+          reject('No books found for this author')
+        } else {
+          resolve(booksByAuthor)
+        }
+      })
+        .then((data) => {
+          res.status(200).json(data)
+        })
+        .catch((error) => {
+          res.status(404).json({ message: error })
+        })
   
   //return res.status(300).json({message: "Yet to be implemented"});
 });
 
 // Get all books based on title
 public_users.get('/title/:title',function (req, res) {
-  const title_name = req.params.title;
-  const res_title = Object.values(books).filter((b) => b.title === title_name);
-  if(res_title){
-    res.send(JSON.stringify(res_title,null,4));
-  } else {
-    res.send(`Book with title name ${title_name} not found`);
-  }
+    new Promise((resolve, reject) => {
+        const title = req.params.title
+        const booksByTitle = Object.values(books).filter((b) =>
+          b.title.includes(title)
+        )
+        if (booksByTitle.length === 0) {
+          reject('No books found with this title')
+        } else {
+          resolve(booksByTitle)
+        }
+      })
+        .then((data) => {
+          res.status(200).json(data)
+        })
+        .catch((error) => {
+          res.status(404).json({ message: error })
+        })
   //return res.status(300).json({message: "Yet to be implemented"});
 });
 
